@@ -8,7 +8,7 @@ KUBERNETES_VERSION=1.13.11
 # 워커 노드 사이즈는 그때그때 결정
 WORKER_NODE_SIZE=Standard_D2_v3
 # 워커 노드 수도 그때그때 결정
-WORKER_NODE_COUNT=3
+WORKER_NODE_COUNT=1
 # 기본 생성되는 노드 풀
 # 네이밍 룰은 역할_cpu_mem_k8sMinorVersion 어떨지??
 # 클러스터 업그레이드할때 노드풀을 새로 생성할거라 구분이 필요할거 같아서..
