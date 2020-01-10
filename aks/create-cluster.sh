@@ -1,3 +1,5 @@
+#!/bin/bash
+
 CLUSTER_NAME=cloudzcp-pog-earth-aks-1
 # 노드에 생성되는 username. node ssh 접속시 필요. default 는 azureuser
 ADMIN_USERNAME=cloudzcp-admin
