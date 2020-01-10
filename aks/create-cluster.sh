@@ -24,7 +24,9 @@ SUBNET_NAME=subnet_name
 VNET_SUBNET_ID=subnet_id
 POD_CIDR=172.10.0.0/16
 SERVICE_CIDR=172.20.0.0/16
-az aks create --resource-group $RESOURCE_GROUP \
+DNS_SERVICE=172.20.0.10
+
+az aks create --debug --resource-group $RESOURCE_GROUP \
     --name $CLUSTER_NAME \
     --admin-username $ADMIN_USERNAME \
     --kubernetes-version $KUBERNETES_VERSION \
@@ -39,4 +41,5 @@ az aks create --resource-group $RESOURCE_GROUP \
     --vnet-subnet-id $VNET_SUBNET_ID \
     --pod-cidr $POD_CIDR \
     --service-cidr $SERVICE_CIDR \
-    --ssh-key-value ~\.ssh\id_rsa.pub
+    --dns-service-ip $DNS_SERVICE \
+    --ssh-key-value ./id_rsa.pub
