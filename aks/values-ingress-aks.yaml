@@ -1,0 +1,13 @@
+controller:
+  replicaCount: 2
+  nodeSelector:
+    beta.kubernetes.io/os: linux
+  publishService:
+    enabled: true
+  service:
+    annotations:
+      service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+
+defaultBackend:
+  nodeSelector:
+   beta.kubernetes.io/os: linux
