@@ -1,13 +1,15 @@
 controller:
   replicaCount: 2
+  ingressClass: private-nginx
   nodeSelector:
     beta.kubernetes.io/os: linux
   publishService:
     enabled: true
   service:
     annotations:
-      service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+      service.beta.kubernetes.io/azure-load-balancer-internal: true
+    externalTrafficPolicy: Local
 
 defaultBackend:
   nodeSelector:
-   beta.kubernetes.io/os: linux
+    beta.kubernetes.io/os: linux
