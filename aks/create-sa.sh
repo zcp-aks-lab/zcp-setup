@@ -1,7 +1,15 @@
 #!/bin/bash
-RG=ERS-DEV-RG
-CLUSTER=cloudzcp-skn-ers-dev
-LOCATION=koreacentral
-CLUSTER_RG=MC_${RG}_${CLUSTER}_${LOCATION}
-STORAGE_ACCOUNT=stersdev
-az storage account create --name $STORAGE_ACCOUNT --resource-group $CLUSTER_RG --location $LOCATION --sku Standard_LRS --kind StorageV2
+SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
+. $SCRIPTPATH/env.properties
+
+function execute() {
+  COMMAND=$1
+  echo Executing command : $COMMAND
+  eval $COMMAND
+}
+
+execute "az storage account create --resource-group $CLUSTER_RESOURCE_GROUP \
+    --name $STORAGE_ACCOUNT_NAME \
+    --location $LOCATION \
+    --sku Standard_LRS \
+    --kind StorageV2"

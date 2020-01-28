@@ -1,7 +1,8 @@
 #!/bin/bash
 
-SCRIPT=$(readlink -f "$0")
-SCRIPTPATH=$(dirname $SCRIPT)
+#SCRIPT=$(readlink -f "$0")
+SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
+#SCRIPTPATH=$(dirname $SCRIPT)
 . $SCRIPTPATH/env.properties
 
 function execute() {
