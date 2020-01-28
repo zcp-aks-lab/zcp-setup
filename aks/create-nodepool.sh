@@ -1,33 +1,26 @@
 #!/bin/bash
 
-RESOURCE_GROUP=ERS-DEV-RG
-CLUSTER_NAME=cloudzcp-skn-ers-dev
-
-MANAGE=management
-MANAGE_SIZE=Standard_F8
- 
-LOGGING=logging
-LOGGING_SIZE=Standard_D4_v3
- 
-# EDGE=
-# EDGE_SIZE=
-
-WORKER=w8x16v115
-WORKER_SIZE=Standard_F8s
-
+SCRIPT=$(readlink -f "$0")
+SCRIPTPATH=$(dirname $SCRIPT)
+. $SCRIPTPATH/env.properties
+. $SCRIPTPATH/sp.properties
 
 # Management Node
-# if [[ -v MANAGE ]]
-  az aks nodepool add --resource-group $RESOURCE_GROUP --cluster-name $CLUSTER_NAME --name $MANAGE --node-count 2 --node-vm-size $MANAGE_SIZE
+if [ ! -z ${MANAGEMENT_NODEPOOL_NAME} ]; then
+  az aks nodepool add --resource-group ${RESOURCE_GROUP} --cluster-name ${CLUSTER_NAME} --name ${MANAGEMENT_NODEPOOL_NAME} --node-count ${MANAGEMENT_NODE_SIZE} --node-vm-size ${MANAGEMENT_NODE_SIZE}
+fi
  
 # Worker Node
-# if [[ -v WORKER ]]
-  az aks nodepool add --resource-group $RESOURCE_GROUP --cluster-name $CLUSTER_NAME --name $WORKER --node-count 2 --node-vm-size $WORKER_SIZE
+if [ ! -z ${WORKER_NODEPOOL_NAME} ]; then
+  az aks nodepool add --resource-group ${RESOURCE_GROUP} --cluster-name ${CLUSTER_NAME} --name ${WORKER_NODEPOOL_NAME} --node-count $((WORKER_NODE_COUNT-1)) --node-vm-size ${WORKER_NODE_SIZE}
+fi
  
 # Logging Node
-# if [[ -v LOGGING ]]
-  az aks nodepool add --resource-group $RESOURCE_GROUP --cluster-name $CLUSTER_NAME --name $LOGGING --node-count 1 --node-vm-size $LOGGING_SIZE
+if [ ! -z ${LOGGING_NODEPOOL_NAME} ]; then
+  az aks nodepool add --resource-group ${RESOURCE_GROUP} --cluster-name ${CLUSTER_NAME} --name ${LOGGING_NODEPOOL_NAME} --node-count ${LOGGING_NODE_COUNT} --node-vm-size ${LOGGING_NODE_SIZE}
+fi
  
 # Edge Node
-# if [[ -v EDGE ]]
-#   az aks nodepool add --resource-group $RESOURCE_GROUP --cluster-name $CLUSTER_NAME --name $EDGE --node-count 2 --node-vm-size $EDGE_SIZE
+if [ ! -z ${EDGE_NODEPOOL_NAME} ]; then
+  az aks nodepool add --resource-group ${RESOURCE_GROUP} --cluster-name ${CLUSTER_NAME} --name ${EDGE_NODEPOOL_NAME} --node-count ${EDGE_NODE_COUNT} --node-vm-size ${EDGE_NODE_SIZE}
+fi

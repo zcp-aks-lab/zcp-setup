@@ -20,8 +20,8 @@ execute "az aks create --resource-group $RESOURCE_GROUP \
     --network-plugin kubenet \
     --network-policy calico \
     --node-vm-size $WORKER_NODE_SIZE \
-    --node-count $WORKER_NODE_COUNT \
-    --nodepool-name $NODEPOOL_NAME \
+    --node-count 1 \
+    --nodepool-name $DEFAULT_NODEPOOL_NAME \
     --service-principal $SERVICE_PRINCIPAL_ID \
     --client-secret $CLIENT_SECRET \
     --vm-set-type VirtualMachineScaleSets \
