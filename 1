@@ -1,0 +1,46 @@
+diff --git a/aks/create-blob.sh b/aks/create-blob.sh
+index a2c3bc7..c20524b 100644
+--- a/aks/create-blob.sh
++++ b/aks/create-blob.sh
+@@ -11,13 +11,13 @@ echo "Load $ENV_FILE" >&2 && . $ENV_FILE
+ function execute() {
+   COMMAND=$1
+   echo Executing command : $COMMAND
+-#  eval $COMMAND
++  eval $COMMAND
+ }
+ 
+ #export AZURE_STORAGE_ACCOUNT=$STORAGE_ACCOUNT_NAME
+ export AZURE_STORAGE_KEY=$STORAGE_ACCOUNT_KEY
+ 
+-execute "az storage container create --resource-group $CLUSTER_RESOURCE_GROUP \
++execute "az storage container create \
+     --name $BLOB_CONTAINER_NAME \
+     --account-name $STORAGE_ACCOUNT_NAME \
+     "
+diff --git a/aks/env.properties b/aks/env.properties
+index 9492bff..f06f17c 100644
+--- a/aks/env.properties
++++ b/aks/env.properties
+@@ -1,5 +1,5 @@
+ # Prject name ex) ski-biok, skn-ers
+-CLUSTER_CODE=sk-aks
++CLUSTER_CODE=skn-ers
+ # Environment profile ex) dev, prod
+ PROFILE=dev
+ # Azure Resource Zone
+@@ -9,7 +9,7 @@ VNET_ADDRESS=10.10.0.0/16
+ SUBNET_ADDRESS=10.10.1.0/24
+ 
+ # Resource Group ex) cloudzcp-${CLUSTER_CODE}-${PROFILE}
+-RESOURCE_GROUP=cloudzcp-${CLUSTER_CODE}-${PROFILE}
++RESOURCE_GROUP=ERS-DEV-RG
+ # Virtual Network Name ex) vnet-${CLUSTER_CODE}
+ VIRTUAL_NETWORK_NAME=vnet-${CLUSTER_CODE}
+ # Subnet Name ex) subnet-${CLUSTER_CODE}-${PROFILE}
+@@ -53,4 +53,4 @@ CLUSTER_RESOURCE_GROUP=MC_${RESOURCE_GROUP}_${CLUSTER_NAME}_${LOCATION}
+ 
+ # Blob Conatiner (Object Storage)
+ STORAGE_ACCOUNT_KEY=$(az storage account keys list --account-name ${STORAGE_ACCOUNT_NAME} --resource-group ${CLUSTER_RESOURCE_GROUP} | jq .[0].value)
+-BLOB_CONTAINER_NAME=${CLUSTER_CODE}-registry
++BLOB_CONTAINER_NAME=zcp-registry-${CLUSTER_CODE}-${PROFILE}
