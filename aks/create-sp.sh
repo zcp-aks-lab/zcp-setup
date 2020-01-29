@@ -1,7 +1,8 @@
 #!/bin/bash
 
-SCRIPT=$(readlink -f "$0")
-SCRIPTPATH=$(dirname $SCRIPT)
+# SCRIPT=$(readlink -f "$0")
+# SCRIPTPATH=$(dirname $SCRIPT)
+SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
 . $SCRIPTPATH/env.properties
 
 COMMAND="az ad sp create-for-rbac --name ${SERVICE_PRINCIPAL_NAME}"
