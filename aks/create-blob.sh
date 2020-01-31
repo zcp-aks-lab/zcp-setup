@@ -14,8 +14,12 @@ function execute() {
   eval $COMMAND
 }
 
-#export AZURE_STORAGE_ACCOUNT=$STORAGE_ACCOUNT_NAME
+# Blob Conatiner (Object Storage)
+STORAGE_ACCOUNT_KEY=$(az storage account keys list --account-name ${STORAGE_ACCOUNT_NAME} --resource-group ${CLUSTER_RESOURCE_GROUP} | jq .[0].value)
+BLOB_CONTAINER_NAME=zcp-registry-${CLUSTER_CODE}-${PROFILE}
+
 export AZURE_STORAGE_KEY=$STORAGE_ACCOUNT_KEY
+#export AZURE_STORAGE_ACCOUNT=$STORAGE_ACCOUNT_NAME
 
 execute "az storage container create \
     --name $BLOB_CONTAINER_NAME \
