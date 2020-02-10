@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aks-setup-node
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aks-setup-node
+  template:
+    metadata:
+      labels:
+        app: aks-setup-node
+    spec:
+      hostPID: true
+      restartPolicy: Always
+      containers:
+      - name: pause
+        image: alpine
+        command:
+          - sh
+          - -x
+          - /scripts/entrypoint.sh
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: scripts
+          mountPath: /scripts
+        - name: host-mount
+          mountPath: /tmp/aks-setup
+      volumes:
+      - name: scripts
+        configMap:
+          name: aks-setup-scripts
+      - name: host-mount
+        hostPath:
+          path: /tmp/aks-setup

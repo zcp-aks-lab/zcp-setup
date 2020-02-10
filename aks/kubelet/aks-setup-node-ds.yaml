@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: aks-setup-node
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: aks-setup-node
+  template:
+    metadata:
+      labels:
+        app: aks-setup-node
+    spec:
+      hostPID: true
+      restartPolicy: Always
+      containers:
+      - name: pause
+        image: alpine
+        command:
+          - sh
+          - /scripts/entrypoint.sh
+        env:
+        - name: DEBUG
+          value: "True"
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: scripts
+          mountPath: /scripts
+        - name: host-mount
+          mountPath: /tmp/aks-setup
+      tolerations:
+      - operator: Exists
+      volumes:
+      - name: scripts
+        configMap:
+          name: aks-setup-scripts
+      - name: host-mount
+        hostPath:
+          path: /tmp/aks-setup
