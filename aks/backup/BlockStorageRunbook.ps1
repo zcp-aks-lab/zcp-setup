@@ -18,7 +18,7 @@ try {
 }
 catch {
     if (!$servicePrincipalConnection) {
-        $ErrorMessage ="Connection $connectionName not found."
+        $ErrorMessage = "Connection $connectionName not found."
         throw $ErrorMessage
     }
     else {
@@ -28,13 +28,13 @@ catch {
 }
 
 "Getting / setting inputs..."
-$date = Get-Date 
+$date = Get-Date -UFormat "%Y%m%d-%H%m%S"
 #where 절로 tag 확인
 $disks = Get-AzDisk | Where-Object {$_.tags["Snapshot"] -eq "True"}
 
 # foreach 조정으로 검색범위 좁히기
 foreach ($disk in $disks) {
-    $snapshotName = $disk.Name + "-" + $date.ToString("yyyyMMdd-HHmmss")
+    $snapshotName = $disk.Name + "-" + $date
 
     $snapshotConfig = New-AzSnapshotConfig `
         -SourceResourceId $disk.Id -Location $disk.Location -SkuName Standard_LRS `
@@ -44,11 +44,27 @@ foreach ($disk in $disks) {
     "Creating snapshot...   [ snapshot Name : $($snapshotName) ]"
     try {
         $snapshot = New-AzSnapshot -ResourceGroupName $disk.ResourceGroupName -SnapshotName $snapshotName -Snapshot $snapshotConfig
-        # 생성을 다른 resource group으로 이동
     }
     catch {
         if (!$snapshot) {
-            $ErrorMessage ="Snapshot [$snapshot]creation failed."
+            $ErrorMessage = "Snapshot [$snapshotName] creation failed."
+            throw $ErrorMessage
+        }
+        else {
+            Write-Error -Message $_.Exception
+            throw $_.Exception
+        }
+    }
+
+    # 생성한 Snapshot을 다른 resource group으로 이동
+    try {
+        $Resource = Get-AzResource -ResourceType "Microsoft.Compute/snapshots" -ResourceName $snapshotName
+        "The resource id to move is [$($Resource.ResourceId)]"
+        Move-AzResource -ResourceId $Resource.ResourceId -DestinationResourceGroupName "Backup-Snapshot" -Force
+    }
+    catch {
+        if (!$Resource) {
+            $ErrorMessage = "Snapshot [$snapshotName] move failed."
             throw $ErrorMessage
         }
         else {
@@ -73,7 +89,7 @@ foreach ($disk in $disks) {
             }
             catch {
                 if (!$removeBehavior) {
-                    $ErrorMessage ="Deleting snapshot [$removeBehavior] failed."
+                    $ErrorMessage = "Deleting snapshot [$($currentSnapshot.Name)] failed."
                     throw $ErrorMessage
                 }
                 else {
