@@ -1,6 +1,7 @@
 Param (
     [string]$resourceGroupname,
     [string]$storageAccountName,
+    [string[]]$fileShareNames,
     [int32]$retention
 )
 
@@ -41,14 +42,14 @@ catch {
     }
 }
 
-$shares = Get-AzStorageShare -Context $storageAcct.Context -Name $fileShareName
-foreach ($name in $shares.Name) {
-    $share = Get-AzStorageShare -Context $storageAcct.Context -Name $name
+
+foreach ($fileShareName in $fileShareNames) {
+    $share = Get-AzStorageShare -Context $storageAcct.Context -Name $fileShareName
     "Creating snapshot...   [ snapshot Name : $($share.Name) ]"
     $snapshot = $share.Snapshot()
 
     # Generate Snapshot List
-    $allSnapshots = Get-AzStorageShare -Context $storageAcct.Context | Where-Object {$_.Name -eq $name -and $_.IsSnapshot -eq $true}
+    $allSnapshots = Get-AzStorageShare -Context $storageAcct.Context | Where-Object {$_.Name -eq $fileShareName -and $_.IsSnapshot -eq $true}
 
     $count = 0
     for ($i = $allSnapshots.Count - 1; $i -ge 0 ; $i--) {
