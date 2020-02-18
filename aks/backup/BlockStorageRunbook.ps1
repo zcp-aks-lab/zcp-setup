@@ -1,5 +1,8 @@
 Param
 (
+    [Parameter(Mandatory = $true, HelpMessage ='Storage Location for the managed disk snapshots')]
+    [String]
+    $resourceGroupName,
     [Parameter(Mandatory = $true, HelpMessage ='Retention for the managed disk snapshots')]
     [Int32]
     $retention
@@ -28,14 +31,13 @@ catch {
 }
 
 "Getting / setting inputs..."
-$date = Get-Date -UFormat "%Y%m%d-%H%m%S"
-$resourceGroupName = "Backup-Snapshot"
+$date = (Get-Date).AddHours(9)
 #where 절로 tag 확인
 $disks = Get-AzDisk | Where-Object {$_.tags["Snapshot"] -eq "True"}
 
 # foreach 조정으로 검색범위 좁히기
 foreach ($disk in $disks) {
-    $snapshotName = $disk.Name + "-" + $date
+    $snapshotName = $disk.Name + "-" + $date.ToString("yyyyMMdd-HHmmss")
 
     $snapshotConfig = New-AzSnapshotConfig `
         -SourceResourceId $disk.Id -Location $disk.Location -SkuName Standard_LRS `
@@ -57,6 +59,7 @@ foreach ($disk in $disks) {
         }
     }
 
+    
     "Remove old snapshots..."
     # 생성한 snapshot의 disk로 변경
     $allSnapshots = Get-AzSnapshot -ResourceGroupName $resourceGroupName | Where-Object {$_.tags["diskName"] -eq $disk.Name}
