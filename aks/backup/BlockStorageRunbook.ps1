@@ -29,6 +29,7 @@ catch {
 
 "Getting / setting inputs..."
 $date = Get-Date -UFormat "%Y%m%d-%H%m%S"
+$resourceGroupName = "Backup-Snapshot"
 #where 절로 tag 확인
 $disks = Get-AzDisk | Where-Object {$_.tags["Snapshot"] -eq "True"}
 
@@ -43,7 +44,7 @@ foreach ($disk in $disks) {
     #Create Snapshot
     "Creating snapshot...   [ snapshot Name : $($snapshotName) ]"
     try {
-        $snapshot = New-AzSnapshot -ResourceGroupName $disk.ResourceGroupName -SnapshotName $snapshotName -Snapshot $snapshotConfig
+        $snapshot = New-AzSnapshot -ResourceGroupName $resourceGroupName -SnapshotName $snapshotName -Snapshot $snapshotConfig
     }
     catch {
         if (!$snapshot) {
@@ -56,26 +57,9 @@ foreach ($disk in $disks) {
         }
     }
 
-    # 생성한 Snapshot을 다른 resource group으로 이동
-    try {
-        $Resource = Get-AzResource -ResourceType "Microsoft.Compute/snapshots" -ResourceName $snapshotName
-        "The resource id to move is [$($Resource.ResourceId)]"
-        Move-AzResource -ResourceId $Resource.ResourceId -DestinationResourceGroupName "Backup-Snapshot" -Force
-    }
-    catch {
-        if (!$Resource) {
-            $ErrorMessage = "Snapshot [$snapshotName] move failed."
-            throw $ErrorMessage
-        }
-        else {
-            Write-Error -Message $_.Exception
-            throw $_.Exception
-        }
-    }
-    
     "Remove old snapshots..."
     # 생성한 snapshot의 disk로 변경
-    $allSnapshots = Get-AzSnapshot -ResourceGroupName $disk.ResourceGroupName | Where-Object {$_.tags["diskName"] -eq $disk.Name}
+    $allSnapshots = Get-AzSnapshot -ResourceGroupName $resourceGroupName | Where-Object {$_.tags["diskName"] -eq $disk.Name}
     
     $count = 0
     for ($i = $allSnapshots.Count - 1; $i -ge 0 ; $i--) {
@@ -85,7 +69,7 @@ foreach ($disk in $disks) {
         if ($count -gt $retention) {
             try {
                 echo "Removing... $($currentSnapshot.Name)"
-                $removeBehavior = Remove-AzSnapshot -ResourceGroupName $disk.ResourceGroupName -SnapshotName $currentSnapshot.Name -Force
+                $removeBehavior = Remove-AzSnapshot -ResourceGroupName $resourceGroupName -SnapshotName $currentSnapshot.Name -Force
             }
             catch {
                 if (!$removeBehavior) {
