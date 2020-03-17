@@ -1,6 +1,7 @@
 import os, sys, subprocess, shutil
 import re, collections
 import logging
+from datetime import datetime as dt
 
 # Setup Logging
 LOG_FORMAT = '%(asctime)s %(levelname)s(%(name)s) - %(message)s'
@@ -42,8 +43,12 @@ def readLines(filename):
   with open(filename) as f:
     return [line.strip() for line in f.readlines()]
 def backup(source, target):
-  log.info("copy file ({} -> {})".format(source, target))
-  shutil.copy(source, target)
+  log.info("(backup: copy) {} -> {}".format(source, target))
+  if os.path.exists(target):
+    log.info("(backup: skip) {} (exist)".format(target))
+  else:
+    shutil.copy(source, target)
+
 
 # Entrypoint
 def main():
@@ -66,23 +71,31 @@ def main():
   updated_line, changed = parseEnv(KUBELET_CONFIG)
 
   if changed:
+    dry_run = 'DRY' in os.environ
     lines[lines.index(KUBELET_CONFIG)] = updated_line
 
-    # copy backup files
+    # create backup files
     backup(config_file, config_file + '.org')
-    backup(config_file, config_file + '.bak')
+    backup(config_file, config_file + '.' + dt.now().isoformat())
 
-    # overwrite current file
-    log.info("updated content of '{}'".format(config_file))
-    log.info('\n' + '\n'.join(lines))
-    # with open(config_file, 'w') as f:
-    #   log.info("overwrite '{}' file".format(f.name))
-    #   f.write('\n'.join(lines))
+    # overwrite config file
+    log.info("(preview) new content of '{}'\n{}".format(config_file, '\n'.join(lines)))
+    if dry_run:
+      log.info("(skip: dry-run) overwrite '{}' file.".format(config_file))
+    else:
+      with open(config_file, 'w') as f:
+        log.info("try to overwrite '{}' file".format(f.name))
+        f.write('\n'.join(lines))
 
     # Restart Kubelet
     try:
-      cmd = 'systemctl status kubelet'
-      log.info("execute '{}'".format(cmd))
+      if dry_run:
+        cmd = 'systemctl status kubelet'
+        log.info("(execute: dry-run) '{}'".format(cmd))
+      else:
+        cmd = 'systemctl restart kubelet'
+        log.info("(execute) '{}'".format(cmd))
+
       stdout = subprocess.check_output(cmd, shell=True)
       # for l in stdout.split('\n'): log.info('  ' + l)
       log.info('\n' + stdout)

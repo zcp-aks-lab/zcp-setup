@@ -1,5 +1,5 @@
 #!/bin/sh
-set -e
+# set -e
 
 # nsenter --help
 function nsenter_()   {

@@ -22,6 +22,11 @@ spec:
           - sh
           - -x
           - /scripts/entrypoint.sh
+         env:
+         - name: DEBUG
+           value: ''
+         - name: DRY
+           value: ''
         securityContext:
           privileged: true
         volumeMounts:

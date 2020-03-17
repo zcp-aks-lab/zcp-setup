@@ -23,6 +23,8 @@ spec:
         env:
         - name: DEBUG
           value: "True"
+        - name: DRY
+          value: "True"
         securityContext:
           privileged: true
         volumeMounts:

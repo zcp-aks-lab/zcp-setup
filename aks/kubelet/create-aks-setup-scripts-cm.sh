@@ -1,5 +1,5 @@
 #!/bin/sh
-NS=default
+NS=default   # change namespace
 NAME=aks-setup-scripts
 
 kubectl delete configmap $NAME -n $NS
