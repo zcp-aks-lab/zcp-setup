@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: aks-setup-node
-  namespace: default
+  namespace: zcp-system
 spec:
   selector:
     matchLabels:
