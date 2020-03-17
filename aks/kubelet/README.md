@@ -34,9 +34,9 @@ $ DRY=True   python scripts/setup.py test/kubelet
 ### Deployment
 ```bash
 # install scripts
-$ bash create-aks-setup-scripts-cm.s
+$ bash create-aks-setup-scripts-cm.sh
 
-# change env variables (DEBUG, DRY)
+# change env variables (DEBUG, DRY, nodeSelector)
 $ vi test/aks-setup-node-dp.yaml
 $ kubectl apply -f test/aks-setup-node-dp.yaml
 ```

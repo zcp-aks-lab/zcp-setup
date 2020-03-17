@@ -2,11 +2,17 @@ import os, sys, subprocess, shutil
 import re, collections
 import logging
 from datetime import datetime as dt
+from os import path, environ, uname
 
 # Setup Logging
 LOG_FORMAT = '%(asctime)s %(levelname)s(%(name)s) - %(message)s'
-LOG_LEVEL = logging.DEBUG if 'DEBUG' in os.environ else logging.INFO
-logging.basicConfig(format=LOG_FORMAT, level=LOG_LEVEL)
+LOG_LEVEL = logging.DEBUG if 'DEBUG' in environ else logging.INFO
+logging.basicConfig(format=LOG_FORMAT, level=LOG_LEVEL, filename=path.join(path.dirname(__file__), 'setup.log'))
+  # handlers=[logging.FileHandler(os.path.realpath(__file__) + '/../setup.log'), logging.StreamHandler()])
+console = logging.StreamHandler()
+console.setLevel(LOG_LEVEL)
+console.setFormatter(logging.Formatter(LOG_FORMAT))
+logging.getLogger().addHandler(console)
 log = logging
 
 # String Parser
@@ -44,7 +50,7 @@ def readLines(filename):
     return [line.strip() for line in f.readlines()]
 def backup(source, target):
   log.info("(backup: copy) {} -> {}".format(source, target))
-  if os.path.exists(target):
+  if path.exists(target):
     log.info("(backup: skip) {} (exist)".format(target))
   else:
     shutil.copy(source, target)
@@ -52,7 +58,7 @@ def backup(source, target):
 
 # Entrypoint
 def main():
-  log.info('{1} ({3})'.format(*os.uname()))
+  log.info('{1} ({3})'.format(*uname()))
 
   # Load Config File
   config_file = getOrDefault(sys.argv, 1, '/etc/default/kubelet')
@@ -71,7 +77,7 @@ def main():
   updated_line, changed = parseEnv(KUBELET_CONFIG)
 
   if changed:
-    dry_run = 'DRY' in os.environ
+    dry_run = 'DRY' in environ
     lines[lines.index(KUBELET_CONFIG)] = updated_line
 
     # create backup files
@@ -105,6 +111,7 @@ def main():
 if __name__ == '__main__':
   try:
     main()
+    log.info('done')
   except Exception as e:
     _, _, tb = sys.exc_info()
     # log.error("{} (lines: {}, file: '{}')".format(e, tb.tb_lineno, tb.tb_frame.f_code.co_filename))
