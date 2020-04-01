@@ -11,3 +11,4 @@ mountOptions:
 parameters:
   skuName: Premium_LRS
 allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer

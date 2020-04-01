@@ -7,4 +7,5 @@ parameters:
   skuName: Standard_LRS
   kind: Managed
 allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
 reclaimPolicy: Retain
