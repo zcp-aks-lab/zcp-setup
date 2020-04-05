@@ -1,0 +1,128 @@
+From 80ae6221165ae9681d186ef68bf3b66486b56f1e Mon Sep 17 00:00:00 2001
+From: Yang Hoon <ssang276@hanmail.net>
+Date: Sun, 5 Apr 2020 19:28:26 +0900
+Subject: [PATCH] Support OpenShift
+
+---
+ k8s/template/mongodb/install_oc.sh               | 13 +++++++++
+ k8s/template/mongodb/values-mongodb-oc.yaml      | 34 ++++++++++++++++++++++++
+ k8s/template/mongodb/zcp-iam-mongodb-pvc-oc.yaml | 16 +++++++++++
+ k8s/template/setenv.sh                           |  5 ++++
+ k8s/template/zcp-iam-config.tpl                  |  1 +
+ 5 files changed, 69 insertions(+)
+ create mode 100644 k8s/template/mongodb/install_oc.sh
+ create mode 100644 k8s/template/mongodb/values-mongodb-oc.yaml
+ create mode 100644 k8s/template/mongodb/zcp-iam-mongodb-pvc-oc.yaml
+
+diff --git a/k8s/template/mongodb/install_oc.sh b/k8s/template/mongodb/install_oc.sh
+new file mode 100644
+index 0000000..38624e6
+--- /dev/null
++++ b/k8s/template/mongodb/install_oc.sh
+@@ -0,0 +1,13 @@
++#!/bin/bash
++
++. ../setenv.sh
++
++#version='0.4.17'  # at catalog
++version='5.7.0'
++name='zcp-iam-db'
++
++helm install stable/mongodb \
++  --version "${version}" \
++  --namespace "${namespace}" \
++  --name "${name}" \
++  -f values-mongodb-oc.yaml
+diff --git a/k8s/template/mongodb/values-mongodb-oc.yaml b/k8s/template/mongodb/values-mongodb-oc.yaml
+new file mode 100644
+index 0000000..0618226
+--- /dev/null
++++ b/k8s/template/mongodb/values-mongodb-oc.yaml
+@@ -0,0 +1,34 @@
++nameOverride: "mongo"
++
++mongodbDatabase: iam
++mongodbUsername: iam
++mongodbPassword: iam # CHANGE
++
++image:
++  registry: registry.au-syd.bluemix.net
++  repository: cloudzcp/mongodb
++  tag: 4.0.6
++
++persistence:
++  enabled: true
++  existingClaim: zcp-iam-mongodb
++
++# tolerations:
++#   - effect: NoSchedule
++#     key: management
++#     operator: Equal
++#     value: "true"
++# 
++# affinity:
++#   nodeAffinity:
++#     requiredDuringSchedulingIgnoredDuringExecution:
++#       nodeSelectorTerms:
++#         - matchExpressions:
++#             - key: beta.kubernetes.io/arch
++#               operator: In
++#               values:
++#                 - amd64
++#             - key: role
++#               operator: In
++#               values:
++#                 - management
+diff --git a/k8s/template/mongodb/zcp-iam-mongodb-pvc-oc.yaml b/k8s/template/mongodb/zcp-iam-mongodb-pvc-oc.yaml
+new file mode 100644
+index 0000000..875fc40
+--- /dev/null
++++ b/k8s/template/mongodb/zcp-iam-mongodb-pvc-oc.yaml
+@@ -0,0 +1,16 @@
++apiVersion: v1
++kind: PersistentVolumeClaim
++metadata:
++  annotations:
++    volume.beta.kubernetes.io/storage-class: managed-nfs-storage
++  labels:
++    billingType: "hourly"
++  name: zcp-iam-mongodb
++  namespace: zcp-system
++spec:
++  accessModes:
++  - ReadWriteOnce
++  resources:
++    requests:
++      storage: 20Gi
++  storageClassName: managed-nfs-storage
+diff --git a/k8s/template/setenv.sh b/k8s/template/setenv.sh
+index a3063a1..90083cb 100644
+--- a/k8s/template/setenv.sh
++++ b/k8s/template/setenv.sh
+@@ -24,6 +24,11 @@ wsh_image=${domain_prefix}registry.cloudzcp.io/cloudzcp/wsh:1.2.0   # private
+ 
+ replicas=1
+ 
++# OpenShift
++keycloak_pwd=        # CHANGE
++keycloak_host=opehshift-keycloak.apps.zcplocal.ose4.com
++keycloak_host=openshift-keycloak.cloudzcp.io
++
+ {
+   # for secret
+   jenkins_user_token=$jenkins_user:$jenkins_token
+diff --git a/k8s/template/zcp-iam-config.tpl b/k8s/template/zcp-iam-config.tpl
+index 7fcb2c9..afe4623 100644
+--- a/k8s/template/zcp-iam-config.tpl
++++ b/k8s/template/zcp-iam-config.tpl
+@@ -11,6 +11,7 @@ data:
+   KEYCLOAK_MASTER_CLIENTID: master-realm
+   # can we use the internal service name instead of public dns?
+   KEYCLOAK_SERVER_URL: https://${domain_prefix}iam.cloudzcp.io/auth/
++  KEYCLOAK_SERVER_URL: https://${keycloak_host)/auth/
+   KUBE_APISERVER_URL: https://${api_server}
+   JENKINS_SERVER_URL: http://zcp-jenkins:8080
+   JENKINS_TEMPLATE_PATH: classpath:jenkins/folder.xml
+-- 
+2.9.0.windows.1
+

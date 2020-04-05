@@ -1,0 +1,228 @@
+From 477128a1adddebee69de8728e74937ca31d84621 Mon Sep 17 00:00:00 2001
+From: Yang Hoon <ssang276@hanmail.net>
+Date: Sun, 5 Apr 2020 19:16:36 +0900
+Subject: [PATCH] Support OpenShift
+
+---
+ manifests/env.properties                           | 14 +++++
+ manifests/keycloak/helm_install_oc.sh              | 20 +++++++
+ manifests/keycloak/values-oc.yaml                  | 66 ++++++++++++++++++++++
+ manifests/postgresql/helm_install_oc.sh            | 15 +++++
+ manifests/postgresql/kube_pvc_create_oc.sh         |  3 +
+ manifests/postgresql/values-oc.yaml                | 25 ++++++++
+ .../postgresql/zcp-oidc-postgresql-pvc-oc.yaml     | 16 ++++++
+ 7 files changed, 159 insertions(+)
+ create mode 100644 manifests/keycloak/helm_install_oc.sh
+ create mode 100644 manifests/keycloak/values-oc.yaml
+ create mode 100644 manifests/postgresql/helm_install_oc.sh
+ create mode 100644 manifests/postgresql/kube_pvc_create_oc.sh
+ create mode 100644 manifests/postgresql/values-oc.yaml
+ create mode 100644 manifests/postgresql/zcp-oidc-postgresql-pvc-oc.yaml
+
+diff --git a/manifests/env.properties b/manifests/env.properties
+index 6bb9140..01c904e 100644
+--- a/manifests/env.properties
++++ b/manifests/env.properties
+@@ -28,3 +28,17 @@ KEYCLOAK_DB_PORT=5432
+ KEYCLOAK_DB_USER=keycloak
+ KEYCLOAK_DB_PWD=
+ KEYCLOAK_DB_PVC_NAME=zcp-oidc-postgresql
++
++# OpenShift
++KEYCLOAK_ADMIN_ID=cloudzcp-admin
++KEYCLOAK_ADMIN_PWD=
++
++KEYCLOAK_DB_PWD=
++
++DOMAIN_SECRET_NAME=openshift-apps-com-cert
++KEYCLOAK_INGRESS_HOSTS=opehshift-keycloak.apps.zcplocal.ose4.com
++KEYCLOAK_INGRESS_TLS_HOSTS=openshift-keycloak.apps.zcplocal.ose4.com
++
++DOMAIN_SECRET_NAME=cloudzcp-io-cert
++KEYCLOAK_INGRESS_HOSTS=openshift-keycloak.cloudzcp.io
++KEYCLOAK_INGRESS_TLS_HOSTS=openshift-keycloak.cloudzcp.io
+\ No newline at end of file
+diff --git a/manifests/keycloak/helm_install_oc.sh b/manifests/keycloak/helm_install_oc.sh
+new file mode 100644
+index 0000000..1ee024d
+--- /dev/null
++++ b/manifests/keycloak/helm_install_oc.sh
+@@ -0,0 +1,20 @@
++. ../env.properties
++
++helm install stable/keycloak --version 2.0.0 \
++--name zcp-oidc-keycloak \
++-f values-oc.yaml \
++--namespace ${TARGET_NAMESPACE} \
++--set keycloak.username=${KEYCLOAK_ADMIN_ID} \
++--set keycloak.password=${KEYCLOAK_ADMIN_PWD} \
++--set keycloak.ingress.hosts[0]=${KEYCLOAK_INGRESS_HOSTS} \
++--set keycloak.ingress.tls[0].hosts[0]=${KEYCLOAK_INGRESS_HOSTS} \
++--set keycloak.ingress.tls[0].secretName=${DOMAIN_SECRET_NAME} \
++--set keycloak.persistence.dbVendor=${KEYCLOAK_DB_VENDOR} \
++--set keycloak.persistence.dbName=${KEYCLOAK_DB_NAME} \
++--set keycloak.persistence.dbPort=${KEYCLOAK_DB_PORT} \
++--set keycloak.persistence.dbUser=${KEYCLOAK_DB_USER} \
++--set keycloak.persistence.dbPassword=${KEYCLOAK_DB_PWD} \
++--set keycloak.resources.limits.cpu=${KEYCLOAK_LIMIT_CPU} \
++--set keycloak.resources.limits.memory=${KEYCLOAK_LIMIT_MEM} \
++--set keycloak.resources.requests.cpu=${KEYCLOAK_REQUEST_CPU} \
++--set keycloak.resources.requests.memory=${KEYCLOAK_REQUEST_MEM}
+diff --git a/manifests/keycloak/values-oc.yaml b/manifests/keycloak/values-oc.yaml
+new file mode 100644
+index 0000000..0a7fa61
+--- /dev/null
++++ b/manifests/keycloak/values-oc.yaml
+@@ -0,0 +1,66 @@
++keycloak:
++  # tolerations:
++  #   - effect: NoSchedule
++  #     key: management
++  #     operator: Equal
++  #     value: "true"
++  image:
++    repository: registry.au-syd.bluemix.net/cloudzcp/keycloak
++
++  # affinity: |
++  #   nodeAffinity:
++  #     requiredDuringSchedulingIgnoredDuringExecution:
++  #       nodeSelectorTerms:
++  #       - matchExpressions:
++  #         - key: beta.kubernetes.io/arch
++  #           operator: In
++  #           values:
++  #           - amd64
++  #         - key: role
++  #           operator: In
++  #           values:
++  #           - management
++
++  extraInitContainers: |
++    - name: theme-provider
++      image: registry.au-syd.bluemix.net/cloudzcp/zcp-keycloak-theme-provider:1.0.0
++      imagePullPolicy: Always
++      command:
++        - sh
++      args:
++        - -c
++        - |
++          echo "Copying theme..."
++          cp -R /zcp/* /theme
++      volumeMounts:
++        - name: theme
++          mountPath: /theme
++
++  extraVolumeMounts: |
++    - name: theme
++      mountPath: /opt/jboss/keycloak/themes/zcp
++    - name: realm-secret
++      mountPath: "/realm/"
++      readOnly: true
++
++  extraVolumes: |
++    - name: theme
++      emptyDir: {}
++    - name: realm-secret
++      secret:
++        secretName: realm-secret
++
++  extraArgs: -Dkeycloak.import=/realm/realm-zcp-export.json
++
++  persistence:
++    deployPostgres: false
++    dbHost: zcp-oidc-postgresql
++
++  ingress:
++    enabled: true
++    path: /
++
++    annotations: 
++      # kubernetes.io/ingress.class: private-nginx
++      nginx.ingress.kubernetes.io/ssl-redirect: "True"
++
+diff --git a/manifests/postgresql/helm_install_oc.sh b/manifests/postgresql/helm_install_oc.sh
+new file mode 100644
+index 0000000..e421c02
+--- /dev/null
++++ b/manifests/postgresql/helm_install_oc.sh
+@@ -0,0 +1,15 @@
++. ../env.properties
++
++helm install stable/postgresql --version 0.12.0 \
++--name zcp-oidc-postgresql \
++-f values-oc.yaml \
++--namespace ${TARGET_NAMESPACE} \
++--set postgresUser=${KEYCLOAK_DB_USER} \
++--set postgresPassword=${KEYCLOAK_DB_PWD} \
++--set postgresDatabase=${KEYCLOAK_DB_NAME} \
++--set persistence.enabled=true \
++--set metrics.enabled=true \
++--set persistence.existingClaim=${KEYCLOAK_DB_PVC_NAME}
++
++#--set persistence.storageClass=ibmc-block-bronze \
++#--set persistence.size=20Gi \
+diff --git a/manifests/postgresql/kube_pvc_create_oc.sh b/manifests/postgresql/kube_pvc_create_oc.sh
+new file mode 100644
+index 0000000..9bd2798
+--- /dev/null
++++ b/manifests/postgresql/kube_pvc_create_oc.sh
+@@ -0,0 +1,3 @@
++. ../env.properties
++
++kubectl create -f zcp-oidc-postgresql-pvc-oc.yaml -n ${TARGET_NAMESPACE}
+diff --git a/manifests/postgresql/values-oc.yaml b/manifests/postgresql/values-oc.yaml
+new file mode 100644
+index 0000000..95efb67
+--- /dev/null
++++ b/manifests/postgresql/values-oc.yaml
+@@ -0,0 +1,25 @@
++image: "registry.au-syd.bluemix.net/cloudzcp/postgres"
++imageTag: "9.6.2"
++
++# tolerations:
++#   - effect: NoSchedule
++#     key: management
++#     operator: Equal
++#     value: "true"
++# affinity:
++#   nodeAffinity:
++#     requiredDuringSchedulingIgnoredDuringExecution:
++#       nodeSelectorTerms:
++#       - matchExpressions:
++#         - key: beta.kubernetes.io/arch
++#           operator: In
++#           values:
++#           - amd64
++#         - key: role
++#           operator: In
++#           values:
++#           - management
++
++metrics:
++  image: registry.au-syd.bluemix.net/cloudzcp/postgres_exporter
++
+diff --git a/manifests/postgresql/zcp-oidc-postgresql-pvc-oc.yaml b/manifests/postgresql/zcp-oidc-postgresql-pvc-oc.yaml
+new file mode 100644
+index 0000000..2eccbd0
+--- /dev/null
++++ b/manifests/postgresql/zcp-oidc-postgresql-pvc-oc.yaml
+@@ -0,0 +1,16 @@
++apiVersion: v1
++kind: PersistentVolumeClaim
++metadata:
++  annotations:
++    volume.beta.kubernetes.io/storage-class: "managed-nfs-storage"
++  labels:
++    app: zcp-oidc-postgresql
++  name: zcp-oidc-postgresql
++  #namespace: zcp-system
++spec:
++  accessModes:
++  - ReadWriteOnce
++  resources:
++    requests:
++      storage: 20Gi
++  storageClassName: managed-nfs-storage
+-- 
+2.9.0.windows.1
+

@@ -1,0 +1,27 @@
+From c03d60d7d8ffc07391890f1cfeb06012c54ee558 Mon Sep 17 00:00:00 2001
+From: Yang Hoon <ssang276@hanmail.net>
+Date: Sun, 5 Apr 2020 19:34:42 +0900
+Subject: [PATCH] Support OpenShift
+
+---
+ k8s/template/setenv.sh | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/k8s/template/setenv.sh b/k8s/template/setenv.sh
+index a32d8a3..f803e7f 100644
+--- a/k8s/template/setenv.sh
++++ b/k8s/template/setenv.sh
+@@ -13,3 +13,9 @@ config_label=pog-dev  #eg. 'pou-dev'
+ 
+ private_alb=$(kubectl get deploy -n kube-system | grep private | cut -f1 -d' ' | head -n 1)
+ private_alb_enable='#'  # $([ -z "$private_alb" ] && echo '#' || echo '' )
++
++# OpenShift
++domain_iam=opehshift-keycloak.apps.zcplocal.ose4.com
++domain_iam=openshift-keycloak.cloudzcp.io
++domain_console=zcp-console.apps.zcplocal.ose4.com
++config_label=openshift
+\ No newline at end of file
+-- 
+2.9.0.windows.1
+
