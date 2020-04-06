@@ -1,10 +1,25 @@
 ## Kubeconfig
 ```bash
+mkdir keycloak && cd keycloak
+export KUBECONFIG=$(pwd)/config
+
 oc login -u admin --server=https://api.xxxx.ose4.com:6443
 oc new-project zcp-system
+# OR
+# oc project zcp-system
 oc adm policy add-scc-to-user anyuid system:serviceaccount:zcp-system:default -n zcp-system
 
 kubectl config get-contexts
+```
+
+## Helm v2.12.3
+```bash
+curl -sO https://get.helm.sh/helm-v2.12.3-linux-amd64.tar.gz
+tar -zxvf helm-v2.12.3-linux-amd64.tar.gz
+
+# mv linux-amd64/helm /usr/local/bin/helm
+export PATH="$(pwd)/linux-amd64:$PATH"
+export HELM_HOME="$(pwd)/.helm"
 ```
 
 ## Exclude Steps
@@ -13,11 +28,14 @@ kubectl config get-contexts
 * Create ImagePullSecrets for kube-system
 * Install Storage Plugin
 * Install Tiller
-* Create TLS Secret for Ingress
+* ~~Create TLS Secret for Ingress~~
 
 ## 1. Setup Cluster
 
 ### 1.1 Create ImagePullSecerts for zcp-system
+```bash
+kubectl patch sa -n zcp-system default -p "{\"imagePullSecrets\":[{\"name\":\"bluemix-cloudzcp-secret\"},{\"name\":\"au-icr-io-cloudzcp-secret\"}]}"
+```
 
 ### 1.2. ClusterRole Labeling
 ```bash
@@ -40,23 +58,29 @@ rolebinding.rbac.authorization.k8s.io/zcp-system-rb-cloudzcp-admin created
 ```
 
 ## 2. Setup ZCP
-- OpenShift Domain : {host}.apps.xxx.ose4.com
+- OpenShift API Server : https://api.xxx.yyy.zzz
+- OpenShift Domain : {host}.apps.xxx.yyy.zzz
+
+```bash
+git clone https://github.com/zcp-aks-lab/zcp-setup && cd zcp-setup
+git checkout openshift
+```
 
 ### 2.1 Keycloak
 Create TLS Secret
 ```bash
-# Copy from OpenShift Console (for apps.xxx.ose4.com)
-bash create-openshift-cert.sh
-kubectl apply -f openshift-apps-com-cert.yaml -n zcp-system
+# [SKIP] Copy from OpenShift Console (for apps.xxx.ose4.com)
+# bash create-openshift-cert.sh
+# kubectl apply -f openshift-apps-com-cert.yaml -n zcp-system
 
 # Create Secret (for cloudzcp.io)
 # !! Prepare cloudzp-io-cert.yaml !!
-kubectl apply -f clouzcp-io-cert.yaml -n zcp-system
+kubectl apply -f cloudzcp-io-cert.yaml -n zcp-system
 ```
 
 Install Keycloak
 ```bash
-git clone https://github.com/zcp-aks-lab/zcp-keycloak.git & cd zcp-keycloak
+git clone https://github.com/zcp-aks-lab/zcp-keycloak.git && cd zcp-keycloak
 git apply ../patch-keycloak.diff
 
 # edit config files
@@ -68,16 +92,17 @@ vi manifests/keycloak/values-oc.yaml
 # postgresql
 cd manifests/postgresql
 bash kube_pvc_create_oc.sh
-bash helm_install_oc.sh
+bash helm_install_oc.sh     # bash helm_install_oc_helm3.sh
 
 # keycloak
 cd ../keycloak
-bash helm_install_oc.sh
+bash kube_secret_create_realm.sh
+bash helm_install_oc.sh     # bash helm_install_oc_helm3.sh
 ```
 
 ### 2.2 ZCP IAM
 ```bash
-git clone https://github.com/zcp-aks-lab/zcp-iam & cd zcp-iam
+git clone https://github.com/zcp-aks-lab/zcp-iam && cd zcp-iam
 git apply ../patch-iam.diff
 
 # edit config files
@@ -87,7 +112,8 @@ vi mongodb/zcp-iam-mongodb-pvc-oc.yaml
 vi mongodb/values-mongodb-oc.yaml
 
 # mongodb
-cd mongodb & bash install_oc.sh
+(cd mongodb && kubectl create -f zcp-iam-mongodb-pvc-oc.yaml)
+(cd mongodb && bash install_oc.sh)    # (cd mongodb && bash install_oc_helm3.sh)
 
 # zcp-iam
 bash template.sh
@@ -103,4 +129,16 @@ kubectl rollout restart deploy/zcp-iam
 ```bash
 # ERR LOG
 java.security.cert.CertificateException: No subject alternative DNS name matching ... found.
+```
+
+### 2. Helm Version
+```bash
+# ERR LOG
+$ bash helm_install_oc.sh
+Error: unknown flag: --name
+$ helm version
+version.BuildInfo{Version:"v3.1.2", GitCommit:"d878d4d45863e42fd5cff6743294a11d28a9abce", GitTreeState:"clean", GoVersion:"go1.13.8"}
+
+# Solution: use 'xxx_helm3.sh'
+$ bash helm_install_oc_helm3.sh
 ```
