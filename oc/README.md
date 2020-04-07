@@ -121,7 +121,53 @@ kubectl apply -f .tmp
 
 kubectl patch deploy zcp-iam --type=json -p='[{"op": "remove", "path": "/spec/template/spec/affinity"}]'
 kubectl patch deploy zcp-iam --type=json -p='[{"op": "remove", "path": "/spec/template/spec/tolerations"}]'
+
+kubectl edit deploy zcp-portal-ui
+# kind: Deployment
+# meatada:
+#   name: zcp-iam
+# spec:
+#   template:
+#     spec:
+#       hostAliases:
+#       - ip: xxx.xxx.xxx.xxx
+#         hostnames:
+#         - openshift-keycloak.apps.xxx.yyy.zz
+
 kubectl rollout restart deploy/zcp-iam
+```
+
+### 2.2 ZCP Console
+```bash
+git clone https://github.com/zcp-aks-lab/zcp-portal-ui && cd zcp-portal-ui
+git apply ../patch-console.diff
+
+# edit config files
+cd k8s/template
+vi setenv.sh      # after 'OpenShift'
+
+# zcp-portal-ui
+bash template.sh
+kubectl apply -f .tmp
+
+kubectl patch deploy zcp-portal-ui --type=json -p="[{\"op\": \"remove\", \"path\": \"/spec/template/spec/affinity\"}]"
+kubectl patch deploy zcp-portal-ui --type=json -p="[{\"op\": \"remove\", \"path\": \"/spec/template/spec/tolerations\"}]"
+
+# kubectl patch deploy zcp-portal-ui --type=json -p="[{\"op\": \"add\", \"path\": \"/spec/template/spec/tolerations\"}]"
+kubectl edit deploy zcp-portal-ui
+# kind: Deployment
+# meatada:
+#   name: zcp-portal-ui
+# spec:
+#   template:
+#     spec:
+#       hostAliases:
+#       - ip: xxx.xxx.xxx.xxx
+#         hostnames:
+#         - openshift-keycloak.apps.xxx.yyy.zzz
+
+kubectl edit cm zcp-portal-service-meta-config
+kubectl rollout restart deploy/zcp-portal-ui
 ```
 
 ## Troubles
