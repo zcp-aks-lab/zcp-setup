@@ -1,25 +1,18 @@
 ## Kubeconfig
 ```bash
-mkdir keycloak && cd keycloak
-export KUBECONFIG=$(pwd)/config
+# mkdir keycloak && cd keycloak
+# export KUBECONFIG=$(pwd)/config
 
-oc login -u admin --server=https://api.xxxx.ose4.com:6443
-oc new-project zcp-system
-# OR
-# oc project zcp-system
+# oc login -u admin --server=https://api.xxx.yyy.zzz:6443
+# oc new-project zcp-system   # oc project zcp-system
+
 oc adm policy add-scc-to-user anyuid system:serviceaccount:zcp-system:default -n zcp-system
+oc policy add-role-to-user edit "system:serviceaccount:tiller:tiller"
 
 kubectl config get-contexts
-```
 
-## Helm v2.12.3
-```bash
-curl -sO https://get.helm.sh/helm-v2.12.3-linux-amd64.tar.gz
-tar -zxvf helm-v2.12.3-linux-amd64.tar.gz
-
-# mv linux-amd64/helm /usr/local/bin/helm
-export PATH="$(pwd)/linux-amd64:$PATH"
-export HELM_HOME="$(pwd)/.helm"
+helm init --client-only
+helm repo update
 ```
 
 ## Exclude Steps
@@ -34,6 +27,13 @@ export HELM_HOME="$(pwd)/.helm"
 
 ### 1.1 Create ImagePullSecerts for zcp-system
 ```bash
+TOKEN=...
+
+kubectl create secret docker-registry bluemix-cloudzcp-secret   --docker-server=registry.au-syd.bluemix.net \
+  --docker-username=token --docker-email=token -n zcp-system --docker-password=$TOKEN
+kubectl create secret docker-registry au-icr-io-cloudzcp-secret --docker-server=au.icr.io \
+  --docker-username=token --docker-email=token -n zcp-system --docker-password=$TOKEN
+
 kubectl patch sa -n zcp-system default -p "{\"imagePullSecrets\":[{\"name\":\"bluemix-cloudzcp-secret\"},{\"name\":\"au-icr-io-cloudzcp-secret\"}]}"
 ```
 
@@ -45,16 +45,14 @@ kubectl label clusterrole member cloudzcp.io/zcp-system-cluster-role=true
 
 kubectl patch clusterrole edit -p="{\"metadata\": {\"name\": \"cicd-manager\"}}" --dry-run -o yaml | kubectl create -f -
 kubectl patch clusterrole view -p="{\"metadata\": {\"name\": \"developer\"}}" --dry-run -o yaml | kubectl create -f -
+kubectl label clusterrole admin cloudzcp.io/zcp-system-namespace-role=true
+kubectl label clusterrole cicd-manager cloudzcp.io/zcp-system-namespace-role=true
+kubectl label clusterrole developer cloudzcp.io/zcp-system-namespace-role=true
 ```
 
 ### 1.3. Create ServiceAccount zcp-system-admin
 ```
 curl -s https://raw.githubusercontent.com/cloudz-cp/zcp-installation/master/zcp-common/zcp-system-admin-sa-crb.yaml | kubectl create -f -
-serviceaccount/zcp-system-admin created
-clusterrolebinding.rbac.authorization.k8s.io/zcp-system-admin created
-serviceaccount/zcp-system-sa-cloudzcp-admin created
-clusterrolebinding.rbac.authorization.k8s.io/zcp-system-crb-cloudzcp-admin created
-rolebinding.rbac.authorization.k8s.io/zcp-system-rb-cloudzcp-admin created
 ```
 
 ## 2. Setup ZCP
@@ -69,7 +67,7 @@ git checkout openshift
 ### 2.1 Keycloak
 Create TLS Secret
 ```bash
-# [SKIP] Copy from OpenShift Console (for apps.xxx.ose4.com)
+# [SKIP] Copy from OpenShift Console (for apps.xxx.yyy.zzz)
 # bash create-openshift-cert.sh
 # kubectl apply -f openshift-apps-com-cert.yaml -n zcp-system
 
@@ -92,12 +90,12 @@ vi manifests/keycloak/values-oc.yaml
 # postgresql
 cd manifests/postgresql
 bash kube_pvc_create_oc.sh
-bash helm_install_oc.sh     # bash helm_install_oc_helm3.sh
+bash helm_install_oc.sh
 
 # keycloak
 cd ../keycloak
 bash kube_secret_create_realm.sh
-bash helm_install_oc.sh     # bash helm_install_oc_helm3.sh
+bash helm_install_oc.sh
 ```
 
 ### 2.2 ZCP IAM
@@ -122,22 +120,10 @@ kubectl apply -f .tmp
 kubectl patch deploy zcp-iam --type=json -p='[{"op": "remove", "path": "/spec/template/spec/affinity"}]'
 kubectl patch deploy zcp-iam --type=json -p='[{"op": "remove", "path": "/spec/template/spec/tolerations"}]'
 
-kubectl edit deploy zcp-portal-ui
-# kind: Deployment
-# meatada:
-#   name: zcp-iam
-# spec:
-#   template:
-#     spec:
-#       hostAliases:
-#       - ip: xxx.xxx.xxx.xxx
-#         hostnames:
-#         - openshift-keycloak.apps.xxx.yyy.zz
-
 kubectl rollout restart deploy/zcp-iam
 ```
 
-### 2.2 ZCP Console
+### 2.3 ZCP Console
 ```bash
 git clone https://github.com/zcp-aks-lab/zcp-portal-ui && cd zcp-portal-ui
 git apply ../patch-console.diff
@@ -153,20 +139,7 @@ kubectl apply -f .tmp
 kubectl patch deploy zcp-portal-ui --type=json -p="[{\"op\": \"remove\", \"path\": \"/spec/template/spec/affinity\"}]"
 kubectl patch deploy zcp-portal-ui --type=json -p="[{\"op\": \"remove\", \"path\": \"/spec/template/spec/tolerations\"}]"
 
-# kubectl patch deploy zcp-portal-ui --type=json -p="[{\"op\": \"add\", \"path\": \"/spec/template/spec/tolerations\"}]"
-kubectl edit deploy zcp-portal-ui
-# kind: Deployment
-# meatada:
-#   name: zcp-portal-ui
-# spec:
-#   template:
-#     spec:
-#       hostAliases:
-#       - ip: xxx.xxx.xxx.xxx
-#         hostnames:
-#         - openshift-keycloak.apps.xxx.yyy.zzz
-
-kubectl edit cm zcp-portal-service-meta-config
+kubectl edit cm zcp-portal-service-meta-config -n zcp-system
 kubectl rollout restart deploy/zcp-portal-ui
 ```
 
@@ -177,7 +150,7 @@ kubectl rollout restart deploy/zcp-portal-ui
 java.security.cert.CertificateException: No subject alternative DNS name matching ... found.
 ```
 
-### 2. Helm Version
+### 2. ~~Helm Version~~
 ```bash
 # ERR LOG
 $ bash helm_install_oc.sh
@@ -187,4 +160,14 @@ version.BuildInfo{Version:"v3.1.2", GitCommit:"d878d4d45863e42fd5cff6743294a11d2
 
 # Solution: use 'xxx_helm3.sh'
 $ bash helm_install_oc_helm3.sh
+```
+
+Install Helm v2.12.3
+```bash
+curl -sO https://get.helm.sh/helm-v2.12.3-linux-amd64.tar.gz
+tar -zxvf helm-v2.12.3-linux-amd64.tar.gz
+
+# mv linux-amd64/helm /usr/local/bin/helm
+export PATH="$(pwd)/linux-amd64:$PATH"
+export HELM_HOME="$(pwd)/.helm"
 ```
