@@ -4,7 +4,8 @@ Param (
     [string[]]$fileShareNames,
     [int32]$retention
 )
-
+ 
+ 
 #Login section
 "Logging in..."
 $connectionName ="AzureRunAsConnection"
@@ -27,7 +28,8 @@ catch {
     }
 }
 
-#Create Snapshot
+
+# Getting / setting inputs
 try {
     $storageAcct = Get-AzStorageAccount -ResourceGroupname $resourceGroupname -Name $storageAccountName
 }
@@ -43,24 +45,51 @@ catch {
 }
 
 
+Write-Output "====================================================================================" 
 foreach ($fileShareName in $fileShareNames) {
-    $share = Get-AzStorageShare -Context $storageAcct.Context -Name $fileShareName
-    "Creating snapshot...   [ snapshot Name : $($share.Name) ]"
-    $snapshot = $share.Snapshot()
-
+    #Create Snapshot
+    try {
+        $share = Get-AzStorageShare -Context $storageAcct.Context -Name $fileShareName
+        "Creating snapshot...   [ snapshot Name : $($share.Name) ]"
+        $snapshot = $share.Snapshot()
+    }
+    catch {
+        if (!$snapshot) {
+            $ErrorMessage = "Snapshot [$($share.Name)] creation failed."
+            throw $ErrorMessage
+        }
+        else {
+            Write-Error -Message $_.Exception
+            throw $_.Exception
+        }
+    }
+ 
     # Generate Snapshot List
     $allSnapshots = Get-AzStorageShare -Context $storageAcct.Context | Where-Object {$_.Name -eq $fileShareName -and $_.IsSnapshot -eq $true}
-
+ 
     $count = 0
     for ($i = $allSnapshots.Count - 1; $i -ge 0 ; $i--) {
         $currentSnapshot = $allSnapshots[$i]
         if ($currentSnapshot.Name -like"$diskName*") {
             $count++
-            if ($count -gt $retention) {
-                echo "Removing...   [ creation Time : $($currentSnapshot.SnapshotTime) ]"
-                Remove-AzStorageShare -Share $currentSnapshot -Force
+ 
+            #Delete Snapshot
+            try {
+                if ($count -gt $retention) {
+                    "Removing...   [ creation Time : $($currentSnapshot.SnapshotTime) ]"
+                    $removeBehavior = Remove-AzStorageShare -Share $currentSnapshot -Force
+                }
+            }
+            catch {
+                if (!$removeBehavior) {
+                    $ErrorMessage = "Deleting snapshot [$($currentSnapshot.Name)] failed."
+                    throw $ErrorMessage
+                }
+                else {
+                    Write-Error -Message $_.Exception
+                    throw $_.Exception
+                }
             }
         }
     }
 }
-

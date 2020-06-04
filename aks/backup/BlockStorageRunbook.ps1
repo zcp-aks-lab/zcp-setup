@@ -1,6 +1,6 @@
 Param
 (
-    [Parameter(Mandatory = $true, HelpMessage ='Storage Location for the managed disk snapshots')]
+    [Parameter(Mandatory = $true, HelpMessage ='Storage Location of the managed disk')]
     [String]
     $resourceGroupName,
     [Parameter(Mandatory = $true, HelpMessage ='Retention for the managed disk snapshots')]
@@ -8,8 +8,9 @@ Param
     $retention
 )
 
-#Login section
-"Logging in..."
+
+# Login section
+Write-Output "Logging in..."
 $connectionName ="AzureRunAsConnection"
 try {
     $servicePrincipalConnection = Get-AutomationConnection -Name $connectionName
@@ -30,11 +31,15 @@ catch {
     }
 }
 
-"Getting / setting inputs..."
-$date = (Get-Date).AddHours(9)
-#where 절로 tag 확인
-$disks = Get-AzDisk | Where-Object {$_.tags["Snapshot"] -eq "True"}
 
+# Getting / setting inputs
+$date = (Get-Date).AddHours(9)
+
+# where 절로 tag 확인
+$disks = Get-AzDisk -ResourceGroupName $resourceGroupName | Where-Object {$_.tags["kubernetes.io-created-for-pvc-namespace"] -eq "zcp-system"}
+
+
+Write-Output "===================================================================================="
 # foreach 조정으로 검색범위 좁히기
 foreach ($disk in $disks) {
     $snapshotName = $disk.Name + "-" + $date.ToString("yyyyMMdd-HHmmss")
@@ -43,8 +48,8 @@ foreach ($disk in $disks) {
         -SourceResourceId $disk.Id -Location $disk.Location -SkuName Standard_LRS `
         -CreateOption copy -Tag @{createdOn ="$date"; diskName =$disk.Name}
     
-    #Create Snapshot
-    "Creating snapshot...   [ snapshot Name : $($snapshotName) ]"
+    # Create Snapshot
+    Write-Output "Creating snapshot...   [ snapshot Name : $($snapshotName) ]"
     try {
         $snapshot = New-AzSnapshot -ResourceGroupName $resourceGroupName -SnapshotName $snapshotName -Snapshot $snapshotConfig
     }
@@ -60,7 +65,7 @@ foreach ($disk in $disks) {
     }
 
     
-    "Remove old snapshots..."
+    Write-Output "Remove old snapshots..."
     # 생성한 snapshot의 disk로 변경
     $allSnapshots = Get-AzSnapshot -ResourceGroupName $resourceGroupName | Where-Object {$_.tags["diskName"] -eq $disk.Name}
     
@@ -70,8 +75,9 @@ foreach ($disk in $disks) {
 
         $count++
         if ($count -gt $retention) {
+            # Delete Snapshot
             try {
-                echo "Removing... $($currentSnapshot.Name)"
+                Write-Output "Removing... $($currentSnapshot.Name)"
                 $removeBehavior = Remove-AzSnapshot -ResourceGroupName $resourceGroupName -SnapshotName $currentSnapshot.Name -Force
             }
             catch {
