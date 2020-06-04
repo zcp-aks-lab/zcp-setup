@@ -40,6 +40,7 @@ $disks = Get-AzDisk -ResourceGroupName $resourceGroupName | Where-Object {$_.tag
 
 
 Write-Output "===================================================================================="
+$backupLocation = "cloudzcp-storage-backup"
 # foreach 조정으로 검색범위 좁히기
 foreach ($disk in $disks) {
     $snapshotName = $disk.Name + "-" + $date.ToString("yyyyMMdd-HHmmss")
@@ -51,7 +52,7 @@ foreach ($disk in $disks) {
     # Create Snapshot
     Write-Output "Creating snapshot...   [ snapshot Name : $($snapshotName) ]"
     try {
-        $snapshot = New-AzSnapshot -ResourceGroupName $resourceGroupName -SnapshotName $snapshotName -Snapshot $snapshotConfig
+        $snapshot = New-AzSnapshot -ResourceGroupName $backupLocation -SnapshotName $snapshotName -Snapshot $snapshotConfig
     }
     catch {
         if (!$snapshot) {
@@ -67,7 +68,7 @@ foreach ($disk in $disks) {
     
     Write-Output "Remove old snapshots..."
     # 생성한 snapshot의 disk로 변경
-    $allSnapshots = Get-AzSnapshot -ResourceGroupName $resourceGroupName | Where-Object {$_.tags["diskName"] -eq $disk.Name}
+    $allSnapshots = Get-AzSnapshot -ResourceGroupName $backupLocation | Where-Object {$_.tags["diskName"] -eq $disk.Name}
     
     $count = 0
     for ($i = $allSnapshots.Count - 1; $i -ge 0 ; $i--) {
