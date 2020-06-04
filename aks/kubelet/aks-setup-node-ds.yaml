@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: aks-setup-node
-  namespace: default
+  namespace: zcp-system
 spec:
   selector:
     matchLabels:
@@ -22,6 +22,8 @@ spec:
           - /scripts/entrypoint.sh
         env:
         - name: DEBUG
+          value: "True"
+        - name: DRY
           value: "True"
         securityContext:
           privileged: true

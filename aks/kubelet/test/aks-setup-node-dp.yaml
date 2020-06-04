@@ -22,6 +22,11 @@ spec:
           - sh
           - -x
           - /scripts/entrypoint.sh
+        env:
+         - name: DEBUG
+           value: ''
+        #  - name: DRY
+        #    value: ''
         securityContext:
           privileged: true
         volumeMounts:
@@ -36,3 +41,5 @@ spec:
       - name: host-mount
         hostPath:
           path: /tmp/aks-setup
+      # nodeSelector:
+      #   kubernetes.io/hostname: aks-w8x16-78474159-vmss000000

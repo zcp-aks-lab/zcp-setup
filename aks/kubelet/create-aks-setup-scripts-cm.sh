@@ -1,5 +1,5 @@
 #!/bin/sh
-NS=default
+NS=zcp-system
 NAME=aks-setup-scripts
 
 kubectl delete configmap $NAME -n $NS
