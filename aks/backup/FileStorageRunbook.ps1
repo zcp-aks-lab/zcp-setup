@@ -45,11 +45,11 @@ catch {
 }
 
 
-Write-Output "====================================================================================" 
 foreach ($fileShareName in $fileShareNames) {
     #Create Snapshot
     try {
         $share = Get-AzStorageShare -Context $storageAcct.Context -Name $fileShareName
+        Write-Output "================================================================================================================================="
         "Creating snapshot...   [ snapshot Name : $($share.Name) ]"
         $snapshot = $share.Snapshot()
     }

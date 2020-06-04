@@ -39,7 +39,6 @@ $date = (Get-Date).AddHours(9)
 $disks = Get-AzDisk -ResourceGroupName $resourceGroupName | Where-Object {$_.tags["kubernetes.io-created-for-pvc-namespace"] -eq "zcp-system"}
 
 
-Write-Output "===================================================================================="
 $backupLocation = "cloudzcp-storage-backup"
 # foreach 조정으로 검색범위 좁히기
 foreach ($disk in $disks) {
@@ -50,6 +49,7 @@ foreach ($disk in $disks) {
         -CreateOption copy -Tag @{createdOn ="$date"; diskName =$disk.Name}
     
     # Create Snapshot
+    Write-Output "================================================================================================================================="
     Write-Output "Creating snapshot...   [ snapshot Name : $($snapshotName) ]"
     try {
         $snapshot = New-AzSnapshot -ResourceGroupName $backupLocation -SnapshotName $snapshotName -Snapshot $snapshotConfig
