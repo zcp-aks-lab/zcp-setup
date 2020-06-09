@@ -46,13 +46,20 @@ foreach ($disk in $disks) {
 
     $snapshotConfig = New-AzSnapshotConfig `
         -SourceResourceId $disk.Id -Location $disk.Location -SkuName Standard_LRS `
-        -CreateOption copy -Tag @{createdOn ="$date"; diskName =$disk.Name}
+        -CreateOption copy -Tag @{createdSnapshot ="$date"; kubernetesClusterName =$resourceGroupName.Split("_")[2];
+        ResourceGroupName=$resourceGroupName; DiskName =$disk.Name }
     
     # Create Snapshot
     Write-Output "================================================================================================================================="
     Write-Output "Creating snapshot...   [ snapshot Name : $($snapshotName) ]"
     try {
         $snapshot = New-AzSnapshot -ResourceGroupName $backupLocation -SnapshotName $snapshotName -Snapshot $snapshotConfig
+
+        Write-Output "ADD Tag"
+        $tags = (Get-AzResource -ResourceGroupName $resourceGroupName -Name $disk.Name).Tags
+        $tags += $snapshot.Tags
+        Set-AzResource -ResourceId $snapshot.Id -Tag $tags -Force
+        
     }
     catch {
         if (!$snapshot) {
