@@ -43,10 +43,11 @@ $backupLocation = "cloudzcp-storage-backup"
 # foreach 조정으로 검색범위 좁히기
 foreach ($disk in $disks) {
     $snapshotName = $disk.Name + "-" + $date.ToString("yyyyMMdd-HHmmss")
+    $clusterName = $resourceGroupName.Split("_").length - 2
 
     $snapshotConfig = New-AzSnapshotConfig `
         -SourceResourceId $disk.Id -Location $disk.Location -SkuName Standard_LRS `
-        -CreateOption copy -Tag @{createdSnapshot ="$date"; kubernetesClusterName =$resourceGroupName.Split("_")[2];
+        -CreateOption copy -Tag @{createdSnapshot ="$date"; kubernetesClusterName =$resourceGroupName.Split("_")[$clusterName];
         ResourceGroupName=$resourceGroupName; DiskName =$disk.Name }
     
     # Create Snapshot
