@@ -47,12 +47,12 @@ foreach ($disk in $disks) {
 
     $snapshotConfig = New-AzSnapshotConfig `
         -SourceResourceId $disk.Id -Location $disk.Location -SkuName Standard_LRS `
-        -CreateOption copy -Tag @{createdSnapshot ="$date"; kubernetesClusterName =$resourceGroupName.Split("_")[$clusterName];
+        -CreateOption copy -Tag @{CreatedSnapshot ="$date"; KubernetesClusterName =$resourceGroupName.Split("_")[$clusterName];
         ResourceGroupName=$resourceGroupName; DiskName =$disk.Name }
     
     # Create Snapshot
     Write-Output "================================================================================================================================="
-    Write-Output "Creating snapshot...   [ snapshot Name : $($snapshotName) ]"
+    Write-Output "Creating snapshot...   [ $($snapshotName) ] in $($backupLocation)"
     try {
         $snapshot = New-AzSnapshot -ResourceGroupName $backupLocation -SnapshotName $snapshotName -Snapshot $snapshotConfig
 
@@ -76,7 +76,7 @@ foreach ($disk in $disks) {
     
     Write-Output "Remove old snapshots..."
     # 생성한 snapshot의 disk로 변경
-    $allSnapshots = Get-AzSnapshot -ResourceGroupName $backupLocation | Where-Object {$_.tags["diskName"] -eq $disk.Name}
+    $allSnapshots = Get-AzSnapshot -ResourceGroupName $backupLocation | Where-Object {$_.tags["DiskName"] -eq $disk.Name}
     
     $count = 0
     for ($i = $allSnapshots.Count - 1; $i -ge 0 ; $i--) {
@@ -86,8 +86,8 @@ foreach ($disk in $disks) {
         if ($count -gt $retention) {
             # Delete Snapshot
             try {
-                Write-Output "Removing... $($currentSnapshot.Name)"
-                $removeBehavior = Remove-AzSnapshot -ResourceGroupName $resourceGroupName -SnapshotName $currentSnapshot.Name -Force
+                Write-Output "Removing snapshot... [ $($currentSnapshot.Name) ] in $($backupLocation)"
+                $removeBehavior = Remove-AzSnapshot -ResourceGroupName $backupLocation -SnapshotName $currentSnapshot.Name -Force
             }
             catch {
                 if (!$removeBehavior) {
