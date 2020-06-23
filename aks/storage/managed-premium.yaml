@@ -7,3 +7,4 @@ parameters:
   skuName: Premium_LRS
   kind: Managed
 allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer

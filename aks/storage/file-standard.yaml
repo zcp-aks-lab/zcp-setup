@@ -11,3 +11,4 @@ mountOptions:
 parameters:
   skuName: Standard_LRS
 allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
